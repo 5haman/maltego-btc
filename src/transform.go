@@ -17,20 +17,23 @@ var (
 )
 
 func GetTransform(query string) (list TransformList) {
-	if len(query) <= 16 {
-		WalletTransform(query, &list)
-  } else {
-		// try to get from redis cache
-		err := TransformModel.Find(query, &list)
-		if err != nil {
-			if _, ok := err.(zoom.ModelNotFoundError); ok {
-				list.Address = query
-				AddressTransform(query, &list)
+	// try to get from redis cache
+	err := TransformModel.Find(query, &list)
+	
+	if err != nil {
+		if _, ok := err.(zoom.ModelNotFoundError); ok {
 
-				// save to redis cache
-				if err := TransformModel.Save(&list); err != nil {
-					fmt.Println(err)
-				}
+			// no cached version found, request from external API
+			list.Id = query
+			if len(query) <= 16 {
+				WalletTransform(query, &list)
+		  } else {
+				AddressTransform(query, &list)
+			}
+
+			// save to redis cache
+			if err := TransformModel.Save(&list); err != nil {
+				fmt.Println(err)
 			}
 		}
 	}
@@ -59,7 +62,7 @@ func WalletTransform(query string, list *TransformList) {
 		if tx.WalletId == query {
 			for _, in := range tx.In {
 				if c[in.Address] == 0 {
-					m[in.Address] = Transform{"PR.BtcAddress", "out", in.Address, LinkColor, 100, "", IconURLAddr, 1}
+					m[in.Address] = Transform{"btc.BtcAddress", "out", in.Address, LinkColor, 100, "", IconURLAddr, 1}
 				}
 				c[in.Address]++
 			}
@@ -93,14 +96,14 @@ func AddressTransform(query string, list *TransformList) {
 		if t.IsInput == true {
 			for _, out := range tx.Out {
 				if c[out.Address] == 0 {
-					m[out.Address] = Transform{"PR.BtcAddress", "out", out.Address, LinkColor, 100, strconv.FormatFloat(out.Amount, 'f', -1, 64) + " BTC", IconURLAddr, 1}
+					m[out.Address] = Transform{"btc.BtcAddress", "out", out.Address, LinkColor, 100, strconv.FormatFloat(out.Amount, 'f', -1, 64) + " BTC", IconURLAddr, 1}
 				}
 				c[out.Address]++
 			}
 		} else {
 			for _, in := range tx.In {
 				if c[in.Address] == 0 {
-					m[in.Address] = Transform{"PR.BtcAddress", "in", in.Address, LinkColor, 100, strconv.FormatFloat(in.Amount, 'f', -1, 64) + " BTC", IconURLAddr, 1}
+					m[in.Address] = Transform{"btc.BtcAddress", "in", in.Address, LinkColor, 100, strconv.FormatFloat(in.Amount, 'f', -1, 64) + " BTC", IconURLAddr, 1}
 				}
 				c[in.Address]++
 			}
@@ -112,7 +115,7 @@ func AddressTransform(query string, list *TransformList) {
 	if addr.Label != "" {
 		Title = addr.Label
 	}
-	NewEnt := Transform{"PR.BtcWallet", "in", Title, LinkColor, 100, "", IconURLWt, 1}
+	NewEnt := Transform{"btc.BtcWallet", "in", Title, LinkColor, 100, "", IconURLWt, 1}
 	list.EntityList = append(list.EntityList, NewEnt)
 
 	// add address inputs/outputs

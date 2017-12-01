@@ -21,17 +21,6 @@ type Wallet struct {
 	TxList				[]Tx			`json:"txs"`
 }
 
-type Transform struct {
-	Type					string
-	Direction			string
-	Value					string
-	LinkColor			string
-	Weight				int
-	LinkLabel			string
-	IconURL				string
-	Count					int
-}
-
 type ShortTx struct {
 	Txid          string	 	`json:"txid"`
 	BlockHeight		int			 	`json:"block_height"`
@@ -66,16 +55,27 @@ type Output struct {
 	Amount        float64		`json:"amount"`
 }
 
+type Transform struct {
+	Type					string
+	Direction			string
+	Value					string
+	LinkColor			string
+	Weight				int
+	LinkLabel			string
+	IconURL				string
+	Count					int
+}
+
 type TransformList struct {
-	Address				string
+	Id						string
 	EntityList		[]Transform
 	zoom.Model		`json:"-"`
 }
 
 func (list *TransformList) ModelId() string {
-	return list.Address
+	return list.Id
 }
 
 func (list *TransformList) SetModelId(id string) {
-	list.Address = id
+	list.Id = id
 }
