@@ -69,7 +69,7 @@ type Transform struct {
 type TransformList struct {
 	Id						string
 	EntityList		[]Transform
-	zoom.Model		`json:"-"`
+	zoom.Model
 }
 
 func (list *TransformList) ModelId() string {

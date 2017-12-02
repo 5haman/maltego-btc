@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	//"log"
 	"strconv"
 	"net/http"
 	"io/ioutil"
@@ -39,6 +40,8 @@ func RequestAddress(query string, from int) (addr Address) {
 }
 
 func httpRequest(url string) (bytes []byte) {
+	//log.Println("http:", url)
+
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
