@@ -13,7 +13,9 @@ var (
 	RedisURL = "127.0.0.1:6379"
 	IconURLAddr = "https://5haman.github.io/images/maltego/bitcoin.png"
 	IconURLWt = "https://5haman.github.io/images/maltego/wallet.png"
+	IconURLService = "https://5haman.github.io/images/maltego/service.png"
 	LinkColor = "#B0BEC5"
+	LinkServiceColor = "#1E88E5"
 	TransformModel	*zoom.Collection
 	pool *zoom.Pool
 )
@@ -58,15 +60,15 @@ func FilterTransform(query string, Type string, list *TransformList) {
 		case "WalletFull", "AddrFull":
 			list2 = append(list2, ent)
 		case "WalletInOut":
-			if ent.Type == "btc.BtcWallet" {
+			if ent.Type == "btc.BtcWallet" || ent.Type == "btc.BtcService" {
 				list2 = append(list2, ent)
 			}
 		case "WalletIn":
-			if ent.Type == "btc.BtcWallet" && ent.Direction == "in" {
+			if (ent.Type == "btc.BtcWallet" || ent.Type == "btc.BtcService") && ent.Direction == "in" {
 				list2 = append(list2, ent)
 			}
 		case "WalletOut":
-			if ent.Type == "btc.BtcWallet" && ent.Direction == "out" {
+			if (ent.Type == "btc.BtcWallet" || ent.Type == "btc.BtcService") && ent.Direction == "out" {
 				list2 = append(list2, ent)
 			}
 		case "WalletAddr":
@@ -86,7 +88,7 @@ func FilterTransform(query string, Type string, list *TransformList) {
 				list2 = append(list2, ent)
 			}
 		case "AddrWallet":
-			if ent.Type == "btc.BtcWallet" {
+			if ent.Type == "btc.BtcWallet" || ent.Type == "btc.BtcService" {
 				list2 = append(list2, ent)
 			}
 		}
@@ -102,7 +104,7 @@ func WalletTransform(query string, list *TransformList) {
 
 	wallet := RequestWallet(query, 0)
 
-	if wallet.TxCount > 100 {
+	if wallet.TxCount > 100 && wallet.TxCount < 5000 {
 		for from := 100; from <= wallet.TxCount; from += 100 {
 			wallet2 := RequestWallet(query, from)
 
@@ -126,22 +128,46 @@ func WalletTransform(query string, list *TransformList) {
 			// Add links to other wallets
 			for _, out := range tx.Out {
 				if out.WalletId != query && c[out.WalletId] == 0 {
-					m[out.WalletId] = Transform{"btc.BtcWallet", "out", out.WalletId, LinkColor, 100, strconv.FormatFloat(out.Amount, 'f', -1, 64) + " BTC", IconURLWt, 1}
+					wallet2 := WalletInfo(out.WalletId)
+					Label := wallet2.WalletId
+					if wallet2.Label != "" {
+						Label = wallet2.Label
+					}
+
+					if wallet2.TxCount >= 5000 {
+						m[out.WalletId] = Transform{"btc.BtcService", "out", Label, LinkServiceColor, 100, strconv.FormatFloat(out.Amount, 'f', -1, 64) + " BTC", IconURLService, 1}
+					} else {
+						m[out.WalletId] = Transform{"btc.BtcWallet", "out", Label, LinkColor, 100, strconv.FormatFloat(out.Amount, 'f', -1, 64) + " BTC", IconURLWt, 1}
+					}
+					c[out.WalletId] = 1
 				}
-				c[out.WalletId]++
 			}
 		} else {
 			// Add incoming links to other wallets
 			if c[tx.WalletId] == 0 {
-				m[tx.WalletId] = Transform{"btc.BtcWallet", "in", tx.WalletId, LinkColor, 100, "", IconURLWt, 1}
+				wallet2 := WalletInfo(tx.WalletId)
+				Label := wallet2.WalletId
+				if wallet2.Label != "" {
+					Label = wallet2.Label
+				}
+				if wallet2.TxCount >= 5000 {
+					m[wallet.WalletId] = Transform{"btc.BtcService", "in", Label, LinkServiceColor, 100, Label, IconURLService, 1}
+				} else {
+					m[wallet.WalletId] = Transform{"btc.BtcWallet", "in", Label, LinkColor, 100, Label, IconURLWt, 1}
+				}
+				c[tx.WalletId] = 1
 			}
-			c[tx.WalletId]++
 		}
 	}
 
 	for _, NewEnt := range m {
 		list.EntityList = append(list.EntityList, NewEnt)
 	}
+}
+
+func WalletInfo(query string) (wallet Wallet) {
+	wallet = RequestWallet(query, 0)
+	return
 }
 
 func AddressTransform(query string, list *TransformList) {
@@ -181,16 +207,23 @@ func AddressTransform(query string, list *TransformList) {
 	}
 
 	// add wallet to linked entities
-	Title := addr.WalletId
-	if addr.Label != "" {
-		Title = addr.Label
+	wallet := WalletInfo(addr.WalletId)
+
+	Label := wallet.WalletId
+	if wallet.Label != "" {
+		Label = wallet.Label
 	}
-	NewEnt := Transform{"btc.BtcWallet", "in", Title, LinkColor, 100, "", IconURLWt, 1}
-	list.EntityList = append(list.EntityList, NewEnt)
+
+	if wallet.TxCount >= 5000 {
+		NewEnt := Transform{"btc.BtcService", "in", Label, LinkServiceColor, 100, "", IconURLService, 1}
+		list.EntityList = append(list.EntityList, NewEnt)
+	} else {
+		NewEnt := Transform{"btc.BtcWallet", "in", Label, LinkColor, 100, "", IconURLWt, 1}
+		list.EntityList = append(list.EntityList, NewEnt)
+	}
 
 	// add address inputs/outputs
 	for _, NewEnt := range m {
-		//NewEnt.Count = c[NewEnt.Value]
 		list.EntityList = append(list.EntityList, NewEnt)
 	}
 }
