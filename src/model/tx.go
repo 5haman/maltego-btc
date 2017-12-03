@@ -56,9 +56,8 @@ func GetTx(query string) (tx Tx) {
 		} else {
 			log.Println("cache error:", err)
 		}
-	} else {
-		log.Println("cache hit:", query)
 	}
+	
 	return
 }
 

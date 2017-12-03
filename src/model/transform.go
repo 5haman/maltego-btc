@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/glennzw/maltegogo"
-	"github.com/albrow/zoom"
 )
 
 type Transform struct {
@@ -23,7 +22,6 @@ type Transform struct {
 type TransformList struct {
 	Id						string
 	EntityList		[]Transform
-	zoom.Model
 }
 
 func (list *TransformList) ModelId() string {
@@ -39,35 +37,20 @@ var (
 )
 
 func GetTransform(query string, Type string) (list TransformList) {
-	// try to get from redis cache
-	err := TransformModel.Find(query, &list)
-	if err != nil {
-		if _, ok := err.(zoom.ModelNotFoundError); ok {
-			list.Id = query
-			log.Println("request:", query)
+	list.Id = query
+	log.Println("transform:", query, Type)
 
-			switch Type {
-			case "WalletFull", "WalletInOut", "WalletIn", "WalletOut", "WalletAddr":
-				WalletTransform(query, &list)
-			case "AddrFull", "AddrInOut", "AddrIn", "AddrOut", "AddrWallet":
-				AddressTransform(query, &list)
-			default:
-				log.Println("error:", "unknown transform type: " + Type)
-				return
-			}
-
-			log.Println("finish request:", query)
-
-			// save to redis cache
-			if err := TransformModel.Save(&list); err != nil {
-				log.Println(err)
-			}
-		} else {
-			log.Println("cache error:", err)
-		}
-	} else {
-		log.Println("cache hit:", query)
+	switch Type {
+	case "WalletFull", "WalletInOut", "WalletIn", "WalletOut", "WalletAddr":
+		WalletTransform(query, &list)
+	case "AddrFull", "AddrInOut", "AddrIn", "AddrOut", "AddrWallet":
+		AddressTransform(query, &list)
+	default:
+		log.Println("error:", "unknown transform type: " + Type)
+		return
 	}
+
+	log.Println("finish transform:", query, Type)
 
 	return
 }
@@ -128,6 +111,7 @@ func WalletTransform(query string, list *TransformList) {
 			// Add links to wallet addresses
 			for _, in := range tx.In {
 				if c[in.Address] == 0 {
+					weight = int(in.Amount * 100)
 					m[in.Address] = Transform{"btc.BtcAddress", "out", in.Address, config.LinkColor1, weight, strconv.FormatFloat(in.Amount, 'f', -1, 64) + " BTC", config.IconAddress, tx.Time}
 				}
 				c[in.Address]++
@@ -147,6 +131,7 @@ func WalletTransform(query string, list *TransformList) {
 							}
 						}
 					}
+					weight = int(amount * 100)
 					linkLabel := "Total: " + strconv.FormatFloat(amount, 'f', -1, 64) + " BTC. Txs: " + strconv.Itoa(count)
 
 					Label := wallet2.WalletId
@@ -180,6 +165,7 @@ func WalletTransform(query string, list *TransformList) {
 				if wallet2.Label != "" {
 					Label = wallet2.Label
 				}
+				weight = int(amount * 100)
 				linkLabel := "Total: " + strconv.FormatFloat(amount, 'f', -1, 64) + " BTC. Txs: " + strconv.Itoa(count)
 				if wallet2.TxCount > config.TxsThreshold {
 					m[wallet.WalletId] = Transform{"btc.BtcService", "in", Label, config.LinkColor2, weight, linkLabel, config.IconService, tx.Time}
@@ -206,6 +192,7 @@ func AddressTransform(query string, list *TransformList) {
 		if tx.WalletId == query {
 			for _, out := range tx.Out {
 				if c[out.Address] == 0 {
+					weight = int(out.Amount * 100)
 					m[out.Address] = Transform{"btc.BtcAddress", "out", out.Address, config.LinkColor1, weight, strconv.FormatFloat(out.Amount, 'f', -1, 64) + " BTC", config.IconAddress, tx.Time}
 				}
 				c[out.Address]++
@@ -213,6 +200,7 @@ func AddressTransform(query string, list *TransformList) {
 		} else {
 			for _, in := range tx.In {
 				if c[in.Address] == 0 {
+					weight = int(in.Amount * 100)
 					m[in.Address] = Transform{"btc.BtcAddress", "in", in.Address, config.LinkColor2, weight, strconv.FormatFloat(in.Amount, 'f', -1, 64) + " BTC", config.IconAddress, tx.Time}
 				}
 				c[in.Address]++
@@ -229,6 +217,7 @@ func AddressTransform(query string, list *TransformList) {
 	}
 
 	// check for large services wallets
+	weight = 100
 	if wallet.TxCount > config.TxsThreshold {
 		NewEnt := Transform{"btc.BtcService", "in", Label, config.LinkColor2, weight, "", config.IconService, 0}
 		list.EntityList = append(list.EntityList, NewEnt)
