@@ -8,6 +8,7 @@ build:
 	strip -x ./build/mbtc
 
 install:
-	cp -f ./build/mbtc /usr/local/bin
+	cp -f ./build/mbtc /usr/local/bin/mbtc
+	cp -f ./config.json /usr/local/etc/mbtc.conf
 
 .PHONY: build
