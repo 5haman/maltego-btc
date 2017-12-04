@@ -9,19 +9,19 @@ import (
 )
 
 type Transform struct {
-	Type					string
-	Direction			string
-	Value					string
-	LinkColor			string
-	Weight				int
-	LinkLabel			string
-	IconURL				string
-	Time					uint64
+	Type      string
+	Direction string
+	Value     string
+	LinkColor string
+	Weight    int
+	LinkLabel string
+	IconURL   string
+	Time      uint64
 }
 
 type TransformList struct {
-	Id						string
-	EntityList		[]Transform
+	Id         string
+	EntityList []Transform
 }
 
 var (
@@ -38,7 +38,7 @@ func GetTransform(query string, Type string) (list TransformList) {
 	case "AddrFull", "AddrInOut", "AddrIn", "AddrOut", "AddrWallet":
 		AddressTransform(query, &list)
 	default:
-		log.Println("error:", "unknown transform type: " + Type)
+		log.Println("error:", "unknown transform type: "+Type)
 		return
 	}
 
@@ -94,7 +94,7 @@ func FilterTransform(query string, Type string, list *TransformList) {
 
 func GetWeight(amount float64) (weight int) {
 	weight = int(amount * baseWeight)
-	if (weight < 1) {
+	if weight < 1 {
 		weight = 1
 	}
 	return
@@ -241,20 +241,20 @@ func PrintTransform(list *TransformList) {
 	tr := &maltegogo.MaltegoTransform{}
 
 	// generate transform result
-  for _, ent := range list.EntityList {
-    NewEnt := tr.AddEntity(ent.Type, ent.Value)
+	for _, ent := range list.EntityList {
+		NewEnt := tr.AddEntity(ent.Type, ent.Value)
 		NewEnt.SetType(ent.Type)
 		NewEnt.AddProperty(ent.Type, ent.Type, "stict", ent.Value)
-    NewEnt.SetWeight(ent.Weight)
+		NewEnt.SetWeight(ent.Weight)
 		NewEnt.SetLinkColor(ent.LinkColor)
-    NewEnt.SetLinkLabel(ent.LinkLabel)
-    NewEnt.SetIconURL(ent.IconURL)
+		NewEnt.SetLinkLabel(ent.LinkLabel)
+		NewEnt.SetIconURL(ent.IconURL)
 
-    if ent.Direction == "in" {
-      NewEnt.AddProperty("link#maltego.link.direction", "link#maltego.link.direction", "stict", "output-to-input")
-    }
-  }
+		if ent.Direction == "in" {
+			NewEnt.AddProperty("link#maltego.link.direction", "link#maltego.link.direction", "stict", "output-to-input")
+		}
+	}
 
-  // print transform result
-  fmt.Println(tr.ReturnOutput())
+	// print transform result
+	fmt.Println(tr.ReturnOutput())
 }

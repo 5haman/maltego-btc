@@ -1,22 +1,22 @@
 package model
 
 import (
-	"log"
-	"time"
-	"strconv"
 	"encoding/json"
+	"log"
+	"strconv"
+	"time"
 
 	"github.com/albrow/zoom"
 )
 
 type Wallet struct {
-	Label     		string		`json:"label"`
-	WalletId			string		`json:"wallet_id"`
-	TxCount				int 			`json:"txs_count"`
-	Histogram			[]float64	`json:"histogram"`
-	AddrTx			  []AddrTx 	`json:"txs",redis:"-"`
-	TxList				[]Tx			`json:"tx_list"`
-	Cached				uint64		`json:"-" zoom:"index"`
+	Label     string    `json:"label"`
+	WalletId  string    `json:"wallet_id"`
+	TxCount   int       `json:"txs_count"`
+	Histogram []float64 `json:"histogram"`
+	AddrTx    []AddrTx  `json:"txs",redis:"-"`
+	TxList    []Tx      `json:"tx_list"`
+	Cached    uint64    `json:"-" zoom:"index"`
 	zoom.Model
 }
 

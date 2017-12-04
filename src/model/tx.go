@@ -5,27 +5,27 @@ import (
 )
 
 type Input struct {
-	Address				string		`json:"address"`
-	WalletId			string		`json:"wallet_id"`
-	Amount        float64		`json:"amount"`
+	Address  string  `json:"address"`
+	WalletId string  `json:"wallet_id"`
+	Amount   float64 `json:"amount"`
 }
 
 type Output struct {
-	Address				string		`json:"address"`
-	WalletId			string		`json:"wallet_id"`
-	Amount        float64		`json:"amount"`
+	Address  string  `json:"address"`
+	WalletId string  `json:"wallet_id"`
+	Amount   float64 `json:"amount"`
 }
 
 type Tx struct {
-	Time          uint64 	 	`json:"time"`
-	WalletId			string		`json:"wallet_id"`
-	Label     		string	 	`json:"label"`
-	In		        []Input 	`json:"in"`
-	Out		        []Output 	`json:"out"`
+	Time     uint64   `json:"time"`
+	WalletId string   `json:"wallet_id"`
+	Label    string   `json:"label"`
+	In       []Input  `json:"in"`
+	Out      []Output `json:"out"`
 }
 
 func GetTx(query string) (tx Tx) {
-  url := ApiUrl + "/tx?txid=" + query + "&caller=" + ApiAgent
+	url := ApiUrl + "/tx?txid=" + query + "&caller=" + ApiAgent
 	txsIn := []Input{}
 
 	bytes := HttpRequest(url)

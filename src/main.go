@@ -1,10 +1,10 @@
 package main
 
 import (
-	"os"
 	"flag"
-	"log"
 	"fmt"
+	"log"
+	"os"
 
 	"./model"
 
@@ -12,11 +12,11 @@ import (
 )
 
 var (
-	query 	string
-	Type  	string
-	path  	string
-	help  	bool
-	config 	model.Config
+	query     string
+	Type      string
+	path      string
+	help      bool
+	config    model.Config
 	defConfig string = "/usr/local/etc/mbtc.conf"
 )
 
@@ -26,10 +26,10 @@ func main() {
 	config = model.ParseConfig(path)
 
 	// enable logging
-	f, err := os.OpenFile(config.LogFile, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0644)
+	f, err := os.OpenFile(config.LogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
-			fmt.Println("Error: %v", err)
-			os.Exit(1)
+		fmt.Println("Error: %v", err)
+		os.Exit(1)
 	}
 	defer f.Close()
 	log.SetOutput(f)

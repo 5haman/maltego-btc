@@ -1,6 +1,7 @@
 install_dir := $(shell find "$(HOME)/Library/Application Support/maltego" -type d -maxdepth 1 | tail -n 1)
 
-default: deps build
+#default: deps build
+default: build install
 
 deps:
 	go get "github.com/glennzw/maltegogo"

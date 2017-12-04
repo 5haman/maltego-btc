@@ -1,28 +1,28 @@
 package model
 
 import (
+	"encoding/json"
 	"log"
 	"strconv"
 	"time"
-	"encoding/json"
 
 	"github.com/albrow/zoom"
 )
 
 type AddrTx struct {
-	Txid          string	 	`json:"txid"`
-	Time          uint64 	 	`json:"time"`
+	Txid string `json:"txid"`
+	Time uint64 `json:"time"`
 }
 
 type Address struct {
-	Address       string		`json:"address"`
-	Label     		string		`json:"label"`
-	WalletId			string		`json:"wallet_id"`
-	TxCount				int 			`json:"txs_count"`
-	Histogram			[]float64	`json:"histogram"`
-	AddrTx			  []AddrTx 	`json:"txs" redis:"-"`
-	TxList				[]Tx			`json:"tx_list"`
-	Cached				uint64		`json:"-" zoom:"index"`
+	Address   string    `json:"address"`
+	Label     string    `json:"label"`
+	WalletId  string    `json:"wallet_id"`
+	TxCount   int       `json:"txs_count"`
+	Histogram []float64 `json:"histogram"`
+	AddrTx    []AddrTx  `json:"txs" redis:"-"`
+	TxList    []Tx      `json:"tx_list"`
+	Cached    uint64    `json:"-" zoom:"index"`
 	zoom.Model
 }
 
@@ -43,8 +43,8 @@ func GetAddress(query string) (addr Address) {
 			if addr.TxCount > step {
 				for from := step; from <= addr.TxCount; from += step {
 					addr2 := RequestAddress(query, from)
-					for _, tx := range addr2.AddrTx  {
-						addr.AddrTx  = append(addr.AddrTx , tx)
+					for _, tx := range addr2.AddrTx {
+						addr.AddrTx = append(addr.AddrTx, tx)
 					}
 				}
 			}
@@ -69,8 +69,6 @@ func GetAddress(query string) (addr Address) {
 		} else {
 			log.Println("cache error:", err)
 		}
-	} else {
-		//log.Println("cache hit:", query)
 	}
 	return
 }

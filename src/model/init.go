@@ -1,13 +1,13 @@
 package model
 
 import (
-	"fmt"
-	"log"
 	"encoding/json"
-	"net/http"
+	"fmt"
 	"io/ioutil"
-	"sort"
+	"log"
+	"net/http"
 	"os"
+	"sort"
 
 	"github.com/albrow/zoom"
 	"gonum.org/v1/gonum/floats"
@@ -15,18 +15,18 @@ import (
 )
 
 type Config struct {
-	ApiAgent				string	`json:"ua"`
-	ApiUrl					string	`json:"api_url"`
-  LogFile					string	`json:"logfile"`
-  RedisURL				string	`json:"redis_url"`
-	IconAddress			string	`json:"icon_address"`
-  IconWallet			string	`json:"icon_wallet"`
-  IconService			string	`json:"icon_service"`
-	LinkColor1			string	`json:"link_default"`
-	LinkColor2			string	`json:"link_service"`
-	TxsThreshold 		int			`json:"wallet_max_size"`
-	CacheAddresses	uint		`json:"cache_addresses"`
-	CacheWallets		uint		`json:"cache_wallets"`
+	ApiAgent       string `json:"ua"`
+	ApiUrl         string `json:"api_url"`
+	LogFile        string `json:"logfile"`
+	RedisURL       string `json:"redis_url"`
+	IconAddress    string `json:"icon_address"`
+	IconWallet     string `json:"icon_wallet"`
+	IconService    string `json:"icon_service"`
+	LinkColor1     string `json:"link_default"`
+	LinkColor2     string `json:"link_service"`
+	TxsThreshold   int    `json:"wallet_max_size"`
+	CacheAddresses uint   `json:"cache_addresses"`
+	CacheWallets   uint   `json:"cache_wallets"`
 }
 
 type TimeRange []float64
@@ -37,13 +37,13 @@ const step = 100
 
 var (
 	AddressModel *zoom.Collection
-	WalletModel	*zoom.Collection
-	pool *zoom.Pool
-	config Config
-	requestMap = map[string]bool{}
+	WalletModel  *zoom.Collection
+	pool         *zoom.Pool
+	config       Config
+	requestMap   = map[string]bool{}
 )
 
-func ParseConfig(path string) (conf Config){
+func ParseConfig(path string) (conf Config) {
 	file, err := ioutil.ReadFile(path)
 	if err != nil {
 		fmt.Println("Error: %v", err)
