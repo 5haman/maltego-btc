@@ -70,16 +70,32 @@ func GetAddress(query string) (addr Address) {
 			log.Println("cache error:", err)
 		}
 	} else {
-		log.Println("cache hit:", query)
+		//log.Println("cache hit:", query)
 	}
 	return
 }
 
 func RequestAddress(query string, from int) (addr Address) {
-	log.Println("http: get", query)
-	url := ApiUrl + "/address?address=" + query + "&from=" + strconv.Itoa(int(from)) + "&count=100&caller=" + ApiAgent
+	// check if this request already fired
+	if requestMap[query] == true {
+		// wait and get it from cache
+		go func() {
+			for {
+				if err := AddressModel.Find(query, &addr); err == nil {
+					return
+				} else {
+					time.Sleep(500 * time.Millisecond)
+				}
+			}
+		}()
+	} else {
+		requestMap[query] = true
+		log.Println("http: get", query)
 
-	bytes := HttpRequest(url)
-	_ = json.Unmarshal(bytes, &addr)
+		url := ApiUrl + "/address?address=" + query + "&from=" + strconv.Itoa(int(from)) + "&count=100&caller=" + ApiAgent
+
+		bytes := HttpRequest(url)
+		_ = json.Unmarshal(bytes, &addr)
+	}
 	return
 }

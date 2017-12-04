@@ -64,17 +64,32 @@ func GetWallet(query string) (wallet Wallet) {
 			log.Println("cache error:", err)
 		}
 	} else {
-		log.Println("cache hit:", query)
+		//log.Println("cache hit:", query)
 	}
 	return
 }
 
 func RequestWallet(query string, from int) (wallet Wallet) {
-	log.Println("http: get", query)
+	// check if this request already fired
+	if requestMap[query] == true {
+		// wait and get it from cache
+		go func() {
+			for {
+				if err := WalletModel.Find(query, &wallet); err == nil {
+					return
+				} else {
+					time.Sleep(500 * time.Millisecond)
+				}
+			}
+		}()
+	} else {
+		requestMap[query] = true
+		log.Println("http: get", query)
 
-	url := ApiUrl + "/wallet?wallet=" + query + "&from=" + strconv.Itoa(int(from)) + "&count=100&caller=" + ApiAgent
+		url := ApiUrl + "/wallet?wallet=" + query + "&from=" + strconv.Itoa(int(from)) + "&count=100&caller=" + ApiAgent
 
-	bytes := HttpRequest(url)
-	_ = json.Unmarshal(bytes, &wallet)
+		bytes := HttpRequest(url)
+		_ = json.Unmarshal(bytes, &wallet)
+	}
 	return
 }

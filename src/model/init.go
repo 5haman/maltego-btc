@@ -40,6 +40,7 @@ var (
 	WalletModel	*zoom.Collection
 	pool *zoom.Pool
 	config Config
+	requestMap = map[string]bool{}
 )
 
 func ParseConfig(path string) (conf Config){
