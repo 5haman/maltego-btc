@@ -66,6 +66,8 @@ func GetWallet(query string) (wallet Wallet) {
 	} else {
 		//log.Println("cache hit:", query)
 	}
+
+	log.Println("time histogram:", wallet.WalletId, wallet.Histogram)
 	return
 }
 
