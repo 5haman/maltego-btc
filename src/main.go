@@ -28,19 +28,19 @@ func main() {
 	// enable logging
 	f, err := os.OpenFile(config.LogFile, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0644)
 	if err != nil {
-			fmt.Println("error opening file: %v", err)
+			fmt.Println("Error: %v", err)
 			os.Exit(1)
 	}
 	defer f.Close()
 	log.SetOutput(f)
 
 	if argc >= 3 {
-		log.Println("args:", os.Args)
 		model.InitCache()
 		list := model.GetTransform(query, Type)
 
 		model.FilterTransform(query, Type, &list)
 		model.PrintTransform(&list)
+		model.CacheGC()
 	} else {
 		flag.PrintDefaults()
 		os.Exit(1)

@@ -3,10 +3,10 @@
   "redis_url": "127.0.0.1:6379",
   "link_default": "#B0BEC5",
   "link_service": "#1E88E5",
-  "threshold": 2000,
-  "ua": "mbtc",
+  "wallet_max_size": 2000,
+  "cache_addresses": 5000,
+  "cache_wallets": 5000,
   "icon_address": "https://5haman.github.io/images/maltego/bitcoin.png",
   "icon_wallet": "https://5haman.github.io/images/maltego/wallet.png",
-  "icon_service": "https://5haman.github.io/images/maltego/service.png",
-  "api_url":   "https://www.walletexplorer.com/api/1"
+  "icon_service": "https://5haman.github.io/images/maltego/service.png"
 }

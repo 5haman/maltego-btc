@@ -2,6 +2,7 @@ package model
 
 import (
 	"log"
+	"time"
 	"strconv"
 	"encoding/json"
 
@@ -9,13 +10,13 @@ import (
 )
 
 type Wallet struct {
-	Found					bool			`json:"found"`
 	Label     		string		`json:"label"`
 	WalletId			string		`json:"wallet_id"`
-	TxCount				uint 			`json:"txs_count"`
+	TxCount				int 			`json:"txs_count"`
 	Histogram			[]float64	`json:"histogram"`
-	AddrTx			  []AddrTx 	`json:"txs"`
+	AddrTx			  []AddrTx 	`json:"txs",redis:"-"`
 	TxList				[]Tx			`json:"tx_list"`
+	Cached				uint64		`json:"-" zoom:"index"`
 	zoom.Model
 }
 
@@ -52,6 +53,7 @@ func GetWallet(query string) (wallet Wallet) {
 			wallet.AddrTx = wallet.AddrTx[:0]
 
 			wallet.Histogram = HourHistogram(x)
+			wallet.Cached = uint64(time.Now().Unix())
 
 			// save to redis cache
 			if err := WalletModel.Save(&wallet); err != nil {
@@ -67,8 +69,10 @@ func GetWallet(query string) (wallet Wallet) {
 	return
 }
 
-func RequestWallet(query string, from uint) (wallet Wallet) {
-	url := config.ApiUrl + "/wallet?wallet=" + query + "&from=" + strconv.Itoa(int(from)) + "&count=100&caller=" + config.ApiAgent
+func RequestWallet(query string, from int) (wallet Wallet) {
+	log.Println("http: get", query)
+
+	url := ApiUrl + "/wallet?wallet=" + query + "&from=" + strconv.Itoa(int(from)) + "&count=100&caller=" + ApiAgent
 
 	bytes := HttpRequest(url)
 	_ = json.Unmarshal(bytes, &wallet)
