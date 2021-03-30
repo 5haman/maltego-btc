@@ -1,7 +1,6 @@
 install_dir := $(shell find "$(HOME)/Library/Application Support/maltego" -type d -maxdepth 1 | tail -n 1)
 
-#default: deps build
-default: build install
+default: deps build
 
 deps:
 	go get "github.com/glennzw/maltegogo"
@@ -11,7 +10,7 @@ deps:
 
 build:
 	mkdir -p ./build
-	go build -o ./build/mbtc ./src
+	GO111MODULE=off go build -o ./build/mbtc ./src
 	strip -x ./build/mbtc
 
 install:
