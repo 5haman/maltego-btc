@@ -12,6 +12,8 @@ type Transform struct {
 	Type      string
 	Direction string
 	Value     string
+	Id        string
+	Balance   string
 	LinkColor string
 	Weight    int
 	LinkLabel string
@@ -33,10 +35,12 @@ func GetTransform(query string, Type string) (list TransformList) {
 	log.Println("start transform: [", query, Type, "]")
 
 	switch Type {
-	case "WalletFull", "WalletInOut", "WalletIn", "WalletOut", "WalletAddr":
+	case "WalletInfo", "WalletInOut", "WalletIn", "WalletOut":
 		WalletTransform(query, &list)
-	case "AddrFull", "AddrInOut", "AddrIn", "AddrOut", "AddrWallet":
-		AddressTransform(query, &list)
+	case "Wallet2Addresses":
+		Wallet2AddressesTransform(query, &list)
+	case "Address2Wallet":
+		Address2WalletTransform(query, &list)
 	default:
 		log.Println("error:", "unknown transform type: "+Type)
 		return
@@ -52,38 +56,28 @@ func FilterTransform(query string, Type string, list *TransformList) {
 
 	for _, ent := range list.EntityList {
 		switch Type {
-		case "WalletFull", "AddrFull":
-			list2 = append(list2, ent)
+		case "WalletInfo":
+			if ent.Type == "btc.BtcWallet" && ent.Direction != "in" && ent.Direction != "out" {
+				list2 = append(list2, ent)
+			}
 		case "WalletInOut":
-			if ent.Type == "btc.BtcWallet" || ent.Type == "btc.BtcService" {
+			if ent.Type == "btc.BtcWallet" {
 				list2 = append(list2, ent)
 			}
 		case "WalletIn":
-			if (ent.Type == "btc.BtcWallet" || ent.Type == "btc.BtcService") && ent.Direction == "in" {
+			if ent.Type == "btc.BtcWallet" && ent.Direction == "in" {
 				list2 = append(list2, ent)
 			}
 		case "WalletOut":
-			if (ent.Type == "btc.BtcWallet" || ent.Type == "btc.BtcService") && ent.Direction == "out" {
+			if ent.Type == "btc.BtcWallet" && ent.Direction == "out" {
 				list2 = append(list2, ent)
 			}
-		case "WalletAddr":
-			if ent.Type == "btc.BtcAddress" {
+		case "Wallet2Addresses":
+			if ent.Type == "maltego.BTCAddress" {
 				list2 = append(list2, ent)
 			}
-		case "AddrInOut":
-			if ent.Type == "btc.BtcAddress" {
-				list2 = append(list2, ent)
-			}
-		case "AddrIn":
-			if ent.Type == "btc.BtcAddress" && ent.Direction == "in" {
-				list2 = append(list2, ent)
-			}
-		case "AddrOut":
-			if ent.Type == "btc.BtcAddress" && ent.Direction == "out" {
-				list2 = append(list2, ent)
-			}
-		case "AddrWallet":
-			if ent.Type == "btc.BtcWallet" || ent.Type == "btc.BtcService" {
+		case "Address2Wallet":
+			if ent.Type == "btc.BtcWallet" {
 				list2 = append(list2, ent)
 			}
 		}
@@ -105,70 +99,91 @@ func WalletTransform(query string, list *TransformList) {
 	m := map[string]Transform{}
 
 	wallet := GetWallet(query)
+	myLabel := wallet.WalletId
+	myIcon := config.IconWallet
+	myBalance := 0.0
+	if len(wallet.WalletTxs) > 0 {
+		myBalance = wallet.WalletTxs[0].Balance
+	}
+	if wallet.Label != "" {
+		myLabel = wallet.Label
+		myIcon = config.IconService
+	}
+	m[wallet.WalletId] = Transform{
+		Type:    "btc.BtcWallet",
+		Value:   myLabel,
+		Id:      wallet.WalletId,
+		Balance: strconv.FormatFloat(myBalance, 'f', -1, 64),
+		IconURL: myIcon,
+	}
+	c[wallet.WalletId] = 1
 
-	for _, tx := range wallet.TxList {
-		if tx.WalletId == query {
-			// Add links to wallet addresses
-			for _, in := range tx.In {
-				if c[in.Address] == 0 {
-					m[in.Address] = Transform{"btc.BtcAddress", "out", in.Address, config.LinkColor1, GetWeight(in.Amount), strconv.FormatFloat(in.Amount, 'f', -1, 64) + " BTC", config.IconAddress, tx.Time}
-				}
-				c[in.Address]++
-			}
-
-			// Add links to other wallets
-			for _, out := range tx.Out {
+	for _, tx := range wallet.WalletTxs {
+		if tx.Type == "sent" {
+			// Add outgoing links to other wallets
+			for _, out := range tx.WalletTxOutputs {
 				if out.WalletId != query && c[out.WalletId] == 0 {
-					wallet2 := GetWallet(out.WalletId)
 					count := 0
 					amount := 0.0
-					for _, tx2 := range wallet.TxList {
-						for _, out2 := range tx2.Out {
-							if out2.WalletId == wallet2.WalletId {
+					for _, tx2 := range wallet.WalletTxs {
+						for _, out2 := range tx2.WalletTxOutputs {
+							if out2.WalletId == out.WalletId {
 								count++
 								amount += out2.Amount
 							}
 						}
 					}
-					linkLabel := "Total: " + strconv.FormatFloat(amount, 'f', -1, 64) + " BTC. Txs: " + strconv.Itoa(count)
-
-					Label := wallet2.WalletId
-					if wallet2.Label != "" {
-						Label = wallet2.Label
+					linkLabel := strconv.FormatFloat(amount, 'f', -1, 64) + " BTC. Txs: " + strconv.Itoa(count)
+					Label := out.WalletId
+					Icon := config.IconWallet
+					if out.Label != "" {
+						Label = out.Label
+						Icon = config.IconService
+					}
+					m[out.WalletId] = Transform{
+						Type:      "btc.BtcWallet",
+						Direction: "out",
+						Value:     Label,
+						Id:        out.WalletId,
+						LinkColor: config.LinkWalletColor,
+						Weight:    GetWeight(amount),
+						LinkLabel: linkLabel,
+						IconURL:   Icon,
+						Time:      tx.Time,
 					}
 
-					if wallet2.TxCount > config.TxsThreshold {
-						m[out.WalletId] = Transform{"btc.BtcService", "out", Label, config.LinkColor2, GetWeight(amount), linkLabel, config.IconService, tx.Time}
-					} else {
-						m[out.WalletId] = Transform{"btc.BtcWallet", "out", Label, config.LinkColor1, GetWeight(amount), linkLabel, config.IconWallet, tx.Time}
-					}
 					c[out.WalletId] = 1
 				}
 			}
 		} else {
-			// Add incoming links to other wallets
+			// Add incoming links from other wallets
 			if c[tx.WalletId] == 0 {
-				wallet2 := GetWallet(tx.WalletId)
 				count := 0
 				amount := 0.0
-				for _, tx2 := range wallet.TxList {
-					for _, in2 := range tx2.In {
-						if in2.WalletId == wallet2.WalletId {
-							count++
-							amount += in2.Amount
-						}
+				for _, tx2 := range wallet.WalletTxs {
+					if tx2.WalletId == tx.WalletId {
+						count++
+						amount += tx2.Amount
 					}
 				}
-				Label := wallet2.WalletId
-				if wallet2.Label != "" {
-					Label = wallet2.Label
-				}
 
-				linkLabel := "Total: " + strconv.FormatFloat(amount, 'f', -1, 64) + " BTC. Txs: " + strconv.Itoa(count)
-				if wallet2.TxCount > config.TxsThreshold {
-					m[wallet.WalletId] = Transform{"btc.BtcService", "in", Label, config.LinkColor2, GetWeight(amount), linkLabel, config.IconService, tx.Time}
-				} else {
-					m[wallet.WalletId] = Transform{"btc.BtcWallet", "in", Label, config.LinkColor1, GetWeight(amount), linkLabel, config.IconWallet, tx.Time}
+				Label := tx.WalletId
+				Icon := config.IconWallet
+				if tx.Label != "" {
+					Label = tx.Label
+					Icon = config.IconService
+				}
+				linkLabel := strconv.FormatFloat(amount, 'f', -1, 64) + " BTC. Txs: " + strconv.Itoa(count)
+				m[tx.WalletId] = Transform{
+					Type:      "btc.BtcWallet",
+					Direction: "in",
+					Value:     Label,
+					Id:        tx.WalletId,
+					LinkColor: config.LinkWalletColor,
+					Weight:    GetWeight(amount),
+					LinkLabel: linkLabel,
+					IconURL:   Icon,
+					Time:      tx.Time,
 				}
 				c[tx.WalletId] = 1
 			}
@@ -180,55 +195,55 @@ func WalletTransform(query string, list *TransformList) {
 	}
 }
 
-func AddressTransform(query string, list *TransformList) {
+func Wallet2AddressesTransform(query string, list *TransformList) {
 	c := map[string]int{}
 	m := map[string]Transform{}
 
-	addr := GetAddress(query)
+	addresses := GetWalletAddresses(query)
 
-	for _, tx := range addr.TxList {
-		if tx.WalletId == query {
-			for _, out := range tx.Out {
-				if c[out.Address] == 0 {
-					m[out.Address] = Transform{"btc.BtcAddress", "out", out.Address, config.LinkColor1, GetWeight(out.Amount), strconv.FormatFloat(out.Amount, 'f', -1, 64) + " BTC", config.IconAddress, tx.Time}
-				}
-				c[out.Address]++
-			}
-		} else {
-			for _, in := range tx.In {
-				if c[in.Address] == 0 {
-					m[in.Address] = Transform{"btc.BtcAddress", "in", in.Address, config.LinkColor2, GetWeight(in.Amount), strconv.FormatFloat(in.Amount, 'f', -1, 64) + " BTC", config.IconAddress, tx.Time}
-				}
-				c[in.Address]++
-			}
+	for _, addr := range addresses.Addresses {
+		m[addr.Address] = Transform{
+			Type:      "maltego.BTCAddress",
+			Direction: "out",
+			Value:     addr.Address,
+			Id:        addr.Address,
+			Balance:   strconv.FormatFloat(addr.Balance, 'f', -1, 64),
+			LinkColor: config.LinkAddressColor,
+			LinkLabel: strconv.FormatFloat(addr.Balance, 'f', -1, 64) + " BTC",
+			Weight:    GetWeight(addr.Balance),
 		}
+		c[addr.Address]++
 	}
 
-	// add wallet to linked entities
-	wallet := GetWallet(addr.WalletId)
-
-	Label := wallet.WalletId
-	if wallet.Label != "" {
-		Label = wallet.Label
+	// add address inputs/outputs
+	for _, NewEnt := range m {
+		list.EntityList = append(list.EntityList, NewEnt)
 	}
+}
 
-	// check for large services wallets
-	amount := 0.0
-	count := 0
-	for _, tx := range wallet.TxList {
-		for _, out := range tx.Out {
-			amount += out.Amount
-			count++
+func Address2WalletTransform(query string, list *TransformList) {
+	c := map[string]int{}
+	m := map[string]Transform{}
+
+	wallet := Address2Wallet(query, 0)
+
+	// Add incoming links from other wallets
+	if c[wallet.WalletId] == 0 {
+		Label := wallet.WalletId
+		Icon := config.IconWallet
+		if wallet.Label != "" {
+			Label = wallet.Label
+			Icon = config.IconService
 		}
-	}
-	linkLabel := "Total: " + strconv.FormatFloat(amount, 'f', -1, 64) + " BTC. Txs: " + strconv.Itoa(count)
-
-	if wallet.TxCount > config.TxsThreshold {
-		NewEnt := Transform{"btc.BtcService", "in", Label, config.LinkColor2, GetWeight(amount), linkLabel, config.IconService, 0}
-		list.EntityList = append(list.EntityList, NewEnt)
-	} else {
-		NewEnt := Transform{"btc.BtcWallet", "in", Label, config.LinkColor1, GetWeight(amount), linkLabel, config.IconWallet, 0}
-		list.EntityList = append(list.EntityList, NewEnt)
+		m[wallet.WalletId] = Transform{
+			Type:      "btc.BtcWallet",
+			Direction: "in",
+			Value:     Label,
+			Id:        wallet.WalletId,
+			LinkColor: config.LinkAddressColor,
+			IconURL:   Icon,
+		}
+		c[wallet.WalletId] = 1
 	}
 
 	// add address inputs/outputs
@@ -245,8 +260,14 @@ func PrintTransform(list *TransformList) {
 		NewEnt := tr.AddEntity(ent.Type, ent.Value)
 		NewEnt.SetType(ent.Type)
 		NewEnt.AddProperty(ent.Type, ent.Type, "stict", ent.Value)
-		NewEnt.SetWeight(ent.Weight)
-		NewEnt.SetLinkColor(ent.LinkColor)
+		NewEnt.AddProperty("id", "id", "stict", ent.Id)
+		NewEnt.AddProperty("balance", "balance", "stict", ent.Balance)
+		if ent.Weight != 0 {
+			NewEnt.SetWeight(ent.Weight)
+		}
+		if ent.LinkColor != "" {
+			NewEnt.SetLinkColor(ent.LinkColor)
+		}
 		NewEnt.SetLinkLabel(ent.LinkLabel)
 		NewEnt.SetIconURL(ent.IconURL)
 

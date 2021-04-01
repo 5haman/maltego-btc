@@ -15,18 +15,18 @@ import (
 )
 
 type Config struct {
-	ApiAgent       string `json:"ua"`
-	ApiUrl         string `json:"api_url"`
-	LogFile        string `json:"logfile"`
-	RedisURL       string `json:"redis_url"`
-	IconAddress    string `json:"icon_address"`
-	IconWallet     string `json:"icon_wallet"`
-	IconService    string `json:"icon_service"`
-	LinkColor1     string `json:"link_default"`
-	LinkColor2     string `json:"link_service"`
-	TxsThreshold   int    `json:"wallet_max_size"`
-	CacheAddresses uint   `json:"cache_addresses"`
-	CacheWallets   uint   `json:"cache_wallets"`
+	ApiAgent         string `json:"ua"`
+	ApiUrl           string `json:"api_url"`
+	LogFile          string `json:"logfile"`
+	RedisURL         string `json:"redis_url"`
+	IconAddress      string `json:"icon_address"`
+	IconWallet       string `json:"icon_wallet"`
+	IconService      string `json:"icon_service"`
+	LinkAddressColor string `json:"link_address_color"`
+	LinkWalletColor  string `json:"link_wallet_color"`
+	TxsThreshold     int    `json:"wallet_max_size"`
+	CacheAddresses   uint   `json:"cache_addresses"`
+	CacheWallets     uint   `json:"cache_wallets"`
 }
 
 type TimeRange []float64
@@ -36,11 +36,11 @@ const ApiAgent = "maltego-btc"
 const step = 100
 
 var (
-	AddressModel *zoom.Collection
-	WalletModel  *zoom.Collection
-	pool         *zoom.Pool
-	config       Config
-	requestMap   = map[string]bool{}
+	WalletModel          *zoom.Collection
+	WalletAddressesModel *zoom.Collection
+	pool                 *zoom.Pool
+	config               Config
+	requestMap           = map[string]bool{}
 )
 
 func ParseConfig(path string) (conf Config) {
@@ -61,7 +61,7 @@ func InitCache() {
 	pool = zoom.NewPool(config.RedisURL)
 	opt := zoom.DefaultCollectionOptions.WithIndex(true).WithName("a")
 
-	AddressModel, err = pool.NewCollectionWithOptions(&Address{}, opt)
+	WalletAddressesModel, err = pool.NewCollectionWithOptions(&WalletAddresses{}, opt)
 	if err != nil {
 		log.Println(err)
 	}
@@ -77,11 +77,11 @@ func CacheGC() {
 	addrCount := 0
 	walletCount := 0
 	removed := 0
-	a := []*Address{}
+	a := []*WalletAddresses{}
 	w := []*Wallet{}
 
 	t := pool.NewTransaction()
-	t.Count(AddressModel, &addrCount)
+	t.Count(WalletAddressesModel, &addrCount)
 	t.Count(WalletModel, &walletCount)
 
 	if err := t.Exec(); err != nil {
@@ -91,12 +91,12 @@ func CacheGC() {
 	// delete old addresses
 	addrToRemove := uint(addrCount) - config.CacheAddresses
 	if addrToRemove > 0 {
-		q := AddressModel.NewQuery().Include("Address").Order("-Cached").Offset(config.CacheAddresses)
+		q := WalletAddressesModel.NewQuery().Include("WalletId").Order("-Cached").Offset(config.CacheAddresses)
 		if err := q.Run(&a); err != nil {
 			log.Println(err)
 		}
 		for id := range a {
-			if _, err := AddressModel.Delete(a[id].Address); err != nil {
+			if _, err := WalletAddressesModel.Delete(a[id].WalletId); err != nil {
 				log.Println(err)
 			}
 			removed++

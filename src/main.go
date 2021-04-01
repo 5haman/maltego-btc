@@ -59,6 +59,7 @@ func parseArgs() (argc int) {
 	}
 
 	argc = len(os.Args)
+	//fmt.Println("Args:", os.Args)
 
 	// get transform type
 	Type = os.Args[1]

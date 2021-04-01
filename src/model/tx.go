@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"log"
 )
 
 type Input struct {
@@ -25,6 +26,7 @@ type Tx struct {
 }
 
 func GetTx(query string) (tx Tx) {
+	log.Println("http: get tx", query)
 	url := ApiUrl + "/tx?txid=" + query + "&caller=" + ApiAgent
 	txsIn := []Input{}
 
