@@ -6,8 +6,6 @@ import (
 	"log"
 	"os"
 
-	"./model"
-
 	"github.com/glennzw/maltegogo"
 )
 
@@ -16,14 +14,13 @@ var (
 	Type      string
 	path      string
 	help      bool
-	config    model.Config
 	defConfig string = "/usr/local/etc/mbtc.conf"
 )
 
 func main() {
 	// parse flags and config
 	argc := parseArgs()
-	config = model.ParseConfig(path)
+	config = ParseConfig(path)
 
 	// enable logging
 	f, err := os.OpenFile(config.LogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
@@ -35,12 +32,12 @@ func main() {
 	log.SetOutput(f)
 
 	if argc >= 3 {
-		model.InitCache()
-		list := model.GetTransform(query, Type)
+		InitCache()
+		list := GetTransform(query, Type)
 
-		model.FilterTransform(query, Type, &list)
-		model.PrintTransform(&list)
-		model.CacheGC()
+		FilterTransform(query, Type, &list)
+		PrintTransform(&list)
+		CacheGC()
 	} else {
 		flag.PrintDefaults()
 		os.Exit(1)

@@ -2,20 +2,13 @@ install_dir := $(shell find "$(HOME)/Library/Application Support/maltego" -type 
 
 default: build
 
-deps:
-	go get "github.com/glennzw/maltegogo"
-	go get "github.com/albrow/zoom"
-	go get "gonum.org/v1/gonum/floats"
-	go get "gonum.org/v1/gonum/stat"
-
 build:
 	mkdir -p ./build
-	GO111MODULE=off go build -o ./build/mbtc ./src
+	go build -o ./build/mbtc ./
 	strip -x ./build/mbtc
 
 install:
 	@echo "Maltego directory: $(install_dir)"
-	#@cp -Rv maltego/* "$(install_dir)/config/Maltego/"
 	@cp -vf ./build/mbtc /usr/local/bin/mbtc
 	@cp -vf ./config.json /usr/local/etc/mbtc.conf
 

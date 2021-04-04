@@ -1,4 +1,4 @@
-package model
+package main
 
 import (
 	"encoding/json"
@@ -8,8 +8,9 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"time"
 
-	"github.com/albrow/zoom"
+	"github.com/patrickmn/go-cache"
 	"gonum.org/v1/gonum/floats"
 	"gonum.org/v1/gonum/stat"
 )
@@ -18,7 +19,7 @@ type Config struct {
 	ApiAgent         string `json:"ua"`
 	ApiUrl           string `json:"api_url"`
 	LogFile          string `json:"logfile"`
-	RedisURL         string `json:"redis_url"`
+	CacheFile        string `json:"cachefile"`
 	IconAddress      string `json:"icon_address"`
 	IconWallet       string `json:"icon_wallet"`
 	IconService      string `json:"icon_service"`
@@ -36,9 +37,8 @@ const ApiAgent = "maltego-btc"
 const step = 100
 
 var (
-	WalletModel          *zoom.Collection
-	WalletAddressesModel *zoom.Collection
-	pool                 *zoom.Pool
+	WalletModel          *cache.Cache
+	WalletAddressesModel *cache.Cache
 	config               Config
 	requestMap           = map[string]bool{}
 )
@@ -56,76 +56,59 @@ func ParseConfig(path string) (conf Config) {
 }
 
 func InitCache() {
-	var err error
-
-	pool = zoom.NewPool(config.RedisURL)
-	opt := zoom.DefaultCollectionOptions.WithIndex(true).WithName("a")
-
-	WalletAddressesModel, err = pool.NewCollectionWithOptions(&WalletAddresses{}, opt)
-	if err != nil {
-		log.Println(err)
-	}
-
-	opt = zoom.DefaultCollectionOptions.WithIndex(true).WithName("w")
-	WalletModel, err = pool.NewCollectionWithOptions(&Wallet{}, opt)
-	if err != nil {
-		log.Println(err)
-	}
+	WalletAddressesModel = cache.New(5*time.Minute, 10*time.Minute)
+	WalletModel = cache.New(5*time.Minute, 10*time.Minute)
 }
 
 func CacheGC() {
-	addrCount := 0
-	walletCount := 0
-	removed := 0
-	a := []*WalletAddresses{}
-	w := []*Wallet{}
-
-	t := pool.NewTransaction()
-	t.Count(WalletAddressesModel, &addrCount)
-	t.Count(WalletModel, &walletCount)
-
-	if err := t.Exec(); err != nil {
-		log.Println(err)
-	}
-
-	// delete old addresses
-	addrToRemove := uint(addrCount) - config.CacheAddresses
-	if addrToRemove > 0 {
-		q := WalletAddressesModel.NewQuery().Include("WalletId").Order("-Cached").Offset(config.CacheAddresses)
-		if err := q.Run(&a); err != nil {
-			log.Println(err)
-		}
-		for id := range a {
-			if _, err := WalletAddressesModel.Delete(a[id].WalletId); err != nil {
-				log.Println(err)
-			}
-			removed++
-		}
-	}
-
-	// delete old wallets
-	walletsToRemove := uint(walletCount) - config.CacheWallets
-	if walletsToRemove > 0 {
-		q := WalletModel.NewQuery().Include("WalletId").Order("-Cached").Offset(config.CacheWallets)
-		if err := q.Run(&w); err != nil {
-			log.Println(err)
-		}
-		for id := range w {
-			log.Println(w[id])
-			if _, err := WalletModel.Delete(w[id].WalletId); err != nil {
-				log.Println(err)
-			}
-			removed++
-		}
-	}
-
-	if removed > 0 {
-		log.Println("gc:", removed, "old objects deleted")
-	}
-}
-
-func ClosePool() error {
-	return pool.Close()
+	//addrCount := 0
+	//walletCount := 0
+	//removed := 0
+	//a := []*WalletAddresses{}
+	//w := []*Wallet{}
+	//
+	//t := pool.NewTransaction()
+	//t.Count(WalletAddressesModel, &addrCount)
+	//t.Count(WalletModel, &walletCount)
+	//
+	//if err := t.Exec(); err != nil {
+	//	log.Println(err)
+	//}
+	//
+	//// delete old addresses
+	//addrToRemove := uint(addrCount) - config.CacheAddresses
+	//if addrToRemove > 0 {
+	//	q := WalletAddressesModel.NewQuery().Include("WalletId").Order("-Cached").Offset(config.CacheAddresses)
+	//	if err := q.Run(&a); err != nil {
+	//		log.Println(err)
+	//	}
+	//	for id := range a {
+	//		if _, err := WalletAddressesModel.Delete(a[id].WalletId); err != nil {
+	//			log.Println(err)
+	//		}
+	//		removed++
+	//	}
+	//}
+	//
+	//// delete old wallets
+	//walletsToRemove := uint(walletCount) - config.CacheWallets
+	//if walletsToRemove > 0 {
+	//	q := WalletModel.NewQuery().Include("WalletId").Order("-Cached").Offset(config.CacheWallets)
+	//	if err := q.Run(&w); err != nil {
+	//		log.Println(err)
+	//	}
+	//	for id := range w {
+	//		log.Println(w[id])
+	//		if _, err := WalletModel.Delete(w[id].WalletId); err != nil {
+	//			log.Println(err)
+	//		}
+	//		removed++
+	//	}
+	//}
+	//
+	//if removed > 0 {
+	//	log.Println("gc:", removed, "old objects deleted")
+	//}
 }
 
 func HourHistogram(x TimeRange) (hst []float64) {

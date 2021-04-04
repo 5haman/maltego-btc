@@ -1,4 +1,4 @@
-package model
+package main
 
 import (
 	"fmt"
@@ -225,7 +225,7 @@ func Address2WalletTransform(query string, list *TransformList) {
 	c := map[string]int{}
 	m := map[string]Transform{}
 
-	wallet := Address2Wallet(query, 0)
+	wallet := GetAddressWallet(query)
 
 	// Add incoming links from other wallets
 	if c[wallet.WalletId] == 0 {
