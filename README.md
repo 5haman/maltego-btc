@@ -5,27 +5,33 @@ Set of Maltego transforms written in Go for Bitcoin addresses/wallets investigat
 ### Installation
 
 Requirements:
-
  - Maltego 4.0 or higher
  - Go 1.8+
 
-Clone repository locally and run: ```make && make install``` (tested under macOS Sierra only for now).
+Installation:
+- Do `go install github.com/Megarushing/maltego-btc@latest`
+- Download [maltego-btc.mtz] (https://github.com/Megarushing/maltego-btc/raw/master/maltego-btc.mtz)
+- In Maltego go to Import | Export > Import Config
+- Point to the downloaded file and import all transforms, entities and icons
+- Important: Edit each Transform BTC command line to include your path to maltego-btc, this is usually `(User Folder)/go/bin/maltego-btc`
+
+Recommended:
+- I recommend also installing maltegos library standard blockchain.com transform to use alongside
 
 ### Config options
 
 Edit config.json and re-run installation commands. List of config options:
 
  - ```logfile``` – path to logfile
- - ```redis_url``` – Redis connection string (host:port)
- - ```link_default``` – color of arrows from wallets and addresses
- - ```link_service``` – color of arrows from large services
- - ```wallet_max_size``` – max count of transactions to distinguish personal wallets and large services (default 2000)
+ - ```cachefile``` – path to cache file
+ - ```link_address_color``` – color of arrows from wallets and addresses
+ - ```link_wallet_color``` – color of arrows from wallets to wallets
+ - ```wallet_max_size``` – max count of transactions to download from api in one go
  - ```cache_addresses``` – max number of addresses to cache
  - ```cache_wallets``` – max number of wallets to cache
  - ```icon_address``` – url to address entity icon
  - ```icon_wallet``` – url to wallet entity icon
  - ```icon_service``` – url to service entity icon
-}
  
 ### Screenshots
 

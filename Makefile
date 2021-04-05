@@ -4,13 +4,11 @@ default: build
 
 build:
 	mkdir -p ./build
-	go build -o ./build/mbtc ./
-	strip -x ./build/mbtc
+	go build -o ./build/maltego-btc ./
+	strip -x ./build/maltego-btc
 
 install:
 	@echo "Maltego directory: $(install_dir)"
-	@cp -vf ./build/mbtc /usr/local/bin/mbtc
-	@cp -vf ./config.json /usr/local/etc/mbtc.conf
-
+	@cp -vf ./build/maltego-btc /usr/local/bin/maltego-btc
 
 .PHONY: build
