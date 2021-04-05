@@ -50,6 +50,22 @@ type WalletAddresses struct {
 	Cached         uint64          `json:"-"`
 }
 
+func (w Wallet) GetId() string {
+	return w.WalletId
+}
+
+func (w WalletAddresses) GetId() string {
+	return w.WalletId
+}
+
+func (w Wallet) GetCacheTime() uint64 {
+	return w.Cached
+}
+
+func (w WalletAddresses) GetCacheTime() uint64 {
+	return w.Cached
+}
+
 func GetWallet(query string) (wallet Wallet) {
 	obj, found := WalletModel.Get(query)
 	if found {

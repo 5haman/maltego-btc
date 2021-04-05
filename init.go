@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -26,8 +27,8 @@ type Config struct {
 	LinkAddressColor string `json:"link_address_color"`
 	LinkWalletColor  string `json:"link_wallet_color"`
 	TxsThreshold     int    `json:"wallet_max_size"`
-	CacheAddresses   uint   `json:"cache_addresses"`
-	CacheWallets     uint   `json:"cache_wallets"`
+	CacheAddresses   int    `json:"cache_addresses"`
+	CacheWallets     int    `json:"cache_wallets"`
 }
 
 type TimeRange []float64
@@ -43,6 +44,11 @@ var (
 	requestMap           = map[string]bool{}
 )
 
+type CachedInterface interface {
+	GetId() string
+	GetCacheTime() uint64
+}
+
 func ParseConfig(path string) (conf Config) {
 	file, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -55,60 +61,101 @@ func ParseConfig(path string) (conf Config) {
 	return
 }
 
-func InitCache() {
-	WalletAddressesModel = cache.New(5*time.Minute, 10*time.Minute)
-	WalletModel = cache.New(5*time.Minute, 10*time.Minute)
+func LoadCache(fname string) error {
+	gob.Register(WalletAddresses{})
+	gob.Register(Wallet{})
+	fp, err := os.Open(fname)
+	if err != nil {
+		WalletAddressesModel = cache.New(24*time.Hour, 48*time.Hour)
+		WalletModel = cache.New(24*time.Hour, 48*time.Hour)
+		log.Println("no cache found, making new...", err)
+		return err
+	}
+	dec := gob.NewDecoder(fp)
+	caches := []map[string]cache.Item{}
+	err = dec.Decode(&caches)
+	if err == nil {
+		WalletModel = cache.NewFrom(24*time.Hour, 48*time.Hour, caches[0])
+		WalletAddressesModel = cache.NewFrom(24*time.Hour, 48*time.Hour, caches[1])
+	}
+	if err != nil {
+		fp.Close()
+		WalletAddressesModel = cache.New(24*time.Hour, 48*time.Hour)
+		WalletModel = cache.New(24*time.Hour, 48*time.Hour)
+		log.Println("error loading cache, making new...", err)
+		return err
+	}
+	return fp.Close()
+}
+
+func SaveCache(fname string) error {
+	caches := []map[string]cache.Item{
+		WalletModel.Items(),
+		WalletAddressesModel.Items(),
+	}
+	fp, err := os.Create(fname)
+	if err != nil {
+		return err
+	}
+	enc := gob.NewEncoder(fp)
+	defer func() {
+		if x := recover(); x != nil {
+			err = fmt.Errorf("Error registering item types with Gob library")
+		}
+	}()
+	for _, c := range caches {
+		gob.Register(c)
+		for _, i := range c {
+			gob.Register(i.Object)
+		}
+	}
+	err = enc.Encode(&caches)
+	if err != nil {
+		fp.Close()
+		return err
+	}
+	return fp.Close()
+}
+
+func CleanupModel(Model *cache.Cache, amount int) {
+	q := Model.Items()
+	removed := 0
+
+	values := make([]CachedInterface, 0, len(q))
+	for _, v := range q {
+		values = append(values, v.Object.(CachedInterface))
+	}
+	sort.Slice(values, func(i, j int) bool {
+		return values[i].GetCacheTime() < values[j].GetCacheTime()
+	})
+
+	for _, obj := range values {
+		Model.Delete(obj.GetId())
+		removed++
+		if removed > amount {
+			break
+		}
+	}
+
+	if removed > 0 {
+		log.Println("gc:", removed, "old objects deleted")
+	}
 }
 
 func CacheGC() {
-	//addrCount := 0
-	//walletCount := 0
-	//removed := 0
-	//a := []*WalletAddresses{}
-	//w := []*Wallet{}
-	//
-	//t := pool.NewTransaction()
-	//t.Count(WalletAddressesModel, &addrCount)
-	//t.Count(WalletModel, &walletCount)
-	//
-	//if err := t.Exec(); err != nil {
-	//	log.Println(err)
-	//}
-	//
-	//// delete old addresses
-	//addrToRemove := uint(addrCount) - config.CacheAddresses
-	//if addrToRemove > 0 {
-	//	q := WalletAddressesModel.NewQuery().Include("WalletId").Order("-Cached").Offset(config.CacheAddresses)
-	//	if err := q.Run(&a); err != nil {
-	//		log.Println(err)
-	//	}
-	//	for id := range a {
-	//		if _, err := WalletAddressesModel.Delete(a[id].WalletId); err != nil {
-	//			log.Println(err)
-	//		}
-	//		removed++
-	//	}
-	//}
-	//
-	//// delete old wallets
-	//walletsToRemove := uint(walletCount) - config.CacheWallets
-	//if walletsToRemove > 0 {
-	//	q := WalletModel.NewQuery().Include("WalletId").Order("-Cached").Offset(config.CacheWallets)
-	//	if err := q.Run(&w); err != nil {
-	//		log.Println(err)
-	//	}
-	//	for id := range w {
-	//		log.Println(w[id])
-	//		if _, err := WalletModel.Delete(w[id].WalletId); err != nil {
-	//			log.Println(err)
-	//		}
-	//		removed++
-	//	}
-	//}
-	//
-	//if removed > 0 {
-	//	log.Println("gc:", removed, "old objects deleted")
-	//}
+	addrCount := len(WalletAddressesModel.Items())
+	walletCount := len(WalletModel.Items())
+
+	// delete old addresses
+	addrToRemove := addrCount - config.CacheAddresses
+	if addrToRemove > 0 {
+		CleanupModel(WalletAddressesModel, addrToRemove)
+	}
+	// delete old wallets
+	walletsToRemove := walletCount - config.CacheWallets
+	if walletsToRemove > 0 {
+		CleanupModel(WalletModel, walletsToRemove)
+	}
 }
 
 func HourHistogram(x TimeRange) (hst []float64) {

@@ -32,12 +32,13 @@ func main() {
 	log.SetOutput(f)
 
 	if argc >= 3 {
-		InitCache()
+		LoadCache(config.CacheFile)
 		list := GetTransform(query, Type)
 
 		FilterTransform(query, Type, &list)
 		PrintTransform(&list)
 		CacheGC()
+		SaveCache(config.CacheFile)
 	} else {
 		flag.PrintDefaults()
 		os.Exit(1)

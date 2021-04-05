@@ -7,8 +7,7 @@ Set of Maltego transforms written in Go for Bitcoin addresses/wallets investigat
 Requirements:
 
  - Maltego 4.0 or higher
- - Redis (used for cache)
- - Go 1.7+
+ - Go 1.8+
 
 Clone repository locally and run: ```make && make install``` (tested under macOS Sierra only for now).
 
