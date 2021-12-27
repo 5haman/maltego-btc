@@ -33,6 +33,7 @@ type Config struct {
 
 type TimeRange []float64
 
+const WalletURL = "https://www.walletexplorer.com/wallet/"
 const ApiUrl = "https://www.walletexplorer.com/api/1"
 const ApiAgent = "maltego-btc"
 const step = 100

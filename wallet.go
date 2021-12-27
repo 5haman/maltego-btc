@@ -93,7 +93,7 @@ func GetWallet(query string) (wallet Wallet) {
 		wallet.Histogram = HourHistogram(x)
 		wallet.Cached = uint64(time.Now().Unix())
 
-		// save to redis cache
+		// save to file cache
 		WalletModel.Set(wallet.WalletId, wallet, cache.NoExpiration)
 	}
 

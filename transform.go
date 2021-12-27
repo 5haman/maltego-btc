@@ -14,6 +14,7 @@ type Transform struct {
 	Value     string
 	Id        string
 	Balance   string
+	Url       string
 	LinkColor string
 	Weight    int
 	LinkLabel string
@@ -113,6 +114,7 @@ func WalletTransform(query string, list *TransformList) {
 		Type:    "btc.BtcWallet",
 		Value:   myLabel,
 		Id:      wallet.WalletId,
+		Url: 	 WalletURL + wallet.WalletId,
 		Balance: strconv.FormatFloat(myBalance, 'f', -1, 64),
 		IconURL: myIcon,
 	}
@@ -145,6 +147,7 @@ func WalletTransform(query string, list *TransformList) {
 						Direction: "out",
 						Value:     Label,
 						Id:        out.WalletId,
+						Url:       WalletURL + out.WalletId,
 						LinkColor: config.LinkWalletColor,
 						Weight:    GetWeight(amount),
 						LinkLabel: linkLabel,
@@ -179,6 +182,7 @@ func WalletTransform(query string, list *TransformList) {
 					Direction: "in",
 					Value:     Label,
 					Id:        tx.WalletId,
+					Url:       WalletURL + tx.WalletId,
 					LinkColor: config.LinkWalletColor,
 					Weight:    GetWeight(amount),
 					LinkLabel: linkLabel,
@@ -204,7 +208,7 @@ func Wallet2AddressesTransform(query string, list *TransformList) {
 	for _, addr := range addresses.Addresses {
 		m[addr.Address] = Transform{
 			Type:      "maltego.BTCAddress",
-			Direction: "out",
+			Direction: "in",
 			Value:     addr.Address,
 			Id:        addr.Address,
 			Balance:   strconv.FormatFloat(addr.Balance, 'f', -1, 64),
@@ -237,8 +241,9 @@ func Address2WalletTransform(query string, list *TransformList) {
 		}
 		m[wallet.WalletId] = Transform{
 			Type:      "btc.BtcWallet",
-			Direction: "in",
+			Direction: "out",
 			Value:     Label,
+			Url:       WalletURL + wallet.WalletId,
 			Id:        wallet.WalletId,
 			LinkColor: config.LinkAddressColor,
 			IconURL:   Icon,
@@ -262,6 +267,7 @@ func PrintTransform(list *TransformList) {
 		NewEnt.AddProperty(ent.Type, ent.Type, "stict", ent.Value)
 		NewEnt.AddProperty("id", "id", "stict", ent.Id)
 		NewEnt.AddProperty("balance", "balance", "stict", ent.Balance)
+		NewEnt.AddProperty("url", "url", "stict", ent.Url)
 		if ent.Weight != 0 {
 			NewEnt.SetWeight(ent.Weight)
 		}
