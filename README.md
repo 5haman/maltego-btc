@@ -9,6 +9,7 @@ Requirements:
  - Go 1.8+
 
 Installation:
+- Install Blockchain.info Transform by Paterva in the Transform Hub
 - Do `go install github.com/Megarushing/maltego-btc@latest`
 - Download [maltego-btc.mtz] (https://github.com/Megarushing/maltego-btc/raw/master/maltego-btc.mtz)
 - In Maltego go to Import | Export > Import Config
